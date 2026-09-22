@@ -1,0 +1,11 @@
+{
+  "textures": [
+    "elemental_reaction:element_diffusion_0",
+    "elemental_reaction:element_diffusion_1",
+    "elemental_reaction:element_diffusion_2",
+    "elemental_reaction:element_diffusion_3",
+    "elemental_reaction:element_diffusion_4",
+    "elemental_reaction:element_diffusion_5",
+    "elemental_reaction:element_diffusion_6"
+  ]
+}
