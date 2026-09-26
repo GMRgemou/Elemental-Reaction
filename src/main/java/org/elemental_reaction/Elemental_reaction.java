@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -31,10 +32,24 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.elemental_reaction.client.FrozenEntityRenderer;
 import org.elemental_reaction.effect.ElementalVulnerableEffect;
+import org.elemental_reaction.effect.FrozenEffect;
 import org.elemental_reaction.effect.ImbalancedEffect;
+import org.elemental_reaction.event.BurningParticles;
+import org.elemental_reaction.event.BurningReactionEffect;
 import org.elemental_reaction.event.ElementDiffusionParticles;
 import org.elemental_reaction.event.ElementExplosionHandler;
+import org.elemental_reaction.event.FreezeParticleEffect;
+import org.elemental_reaction.event.FreezeParticles;
+import org.elemental_reaction.event.MudflowParticleEffect;
+import org.elemental_reaction.event.MudflowParticles;
+import org.elemental_reaction.event.SoulScorchParticleEffect;
+import org.elemental_reaction.event.SoulScorchParticles;
+import org.elemental_reaction.event.TurbulenceParticles;
+import org.elemental_reaction.event.TurbulenceParticleEffect;
+import org.elemental_reaction.particle.ReactionTextParticleOptions;
+import org.elemental_reaction.particle.ReactionTextParticleType;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -74,6 +89,93 @@ public class Elemental_reaction {
             "element_diffusion",
             () -> new SimpleParticleType(true)
     );
+    public static final RegistryObject<SimpleParticleType> MUD_BLOB_PARTICLE = PARTICLE_TYPES.register(
+            "mud_blob",
+            () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> MUD_CHUNK_PARTICLE = PARTICLE_TYPES.register(
+            "mud_chunk",
+            () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> SWAMP_MOTE_PARTICLE = PARTICLE_TYPES.register(
+            "swamp_mote",
+            () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> WATER_DROP_PARTICLE = PARTICLE_TYPES.register(
+            "water_drop",
+            () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> MUD_RING_PARTICLE = PARTICLE_TYPES.register(
+            "mud_ring",
+            () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> TURBULENCE_ARC_PARTICLE = PARTICLE_TYPES.register(
+            "turbulence_arc", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> TURBULENCE_TIDE_DROP_PARTICLE = PARTICLE_TYPES.register(
+            "turbulence_tide_drop", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> TURBULENCE_WATER_DROP_PARTICLE = PARTICLE_TYPES.register(
+            "turbulence_water_drop", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> TURBULENCE_DARK_SPARK_PARTICLE = PARTICLE_TYPES.register(
+            "turbulence_dark_spark", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> TURBULENCE_BLACK_SMOKE_PARTICLE = PARTICLE_TYPES.register(
+            "turbulence_black_smoke", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BURNING_FLAME_PARTICLE = PARTICLE_TYPES.register(
+            "burning_flame", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BURNING_EMBER_PARTICLE = PARTICLE_TYPES.register(
+            "burning_ember", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BURNING_SPARK_PARTICLE = PARTICLE_TYPES.register(
+            "burning_spark", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BURNING_GRASS_BIT_PARTICLE = PARTICLE_TYPES.register(
+            "burning_grass_bit", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BURNING_BLACK_SMOKE_PARTICLE = PARTICLE_TYPES.register(
+            "burning_black_smoke", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> FREEZE_ICE_RING_PARTICLE = PARTICLE_TYPES.register(
+            "freeze_ice_ring", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> FREEZE_ICE_CRYSTAL_PARTICLE = PARTICLE_TYPES.register(
+            "freeze_ice_crystal", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> FREEZE_FROST_MIST_PARTICLE = PARTICLE_TYPES.register(
+            "freeze_frost_mist", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> FREEZE_ICE_SHARD_PARTICLE = PARTICLE_TYPES.register(
+            "freeze_ice_shard", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> FREEZE_SNOW_GLINT_PARTICLE = PARTICLE_TYPES.register(
+            "freeze_snow_glint", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> SOUL_FLAME_PARTICLE = PARTICLE_TYPES.register(
+            "soul_flame", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> DARK_SPARK_PARTICLE = PARTICLE_TYPES.register(
+            "dark_spark", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> BLACK_SMOKE_PARTICLE = PARTICLE_TYPES.register(
+            "black_smoke", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> SOUL_SHARD_PARTICLE = PARTICLE_TYPES.register(
+            "soul_shard", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> SOUL_SPARK_PARTICLE = PARTICLE_TYPES.register(
+            "soul_spark", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<SimpleParticleType> SOUL_RING_PARTICLE = PARTICLE_TYPES.register(
+            "soul_ring", () -> new SimpleParticleType(true)
+    );
+    public static final RegistryObject<ParticleType<ReactionTextParticleOptions>> REACTION_TEXT_PARTICLE = PARTICLE_TYPES.register(
+            "reaction_text",
+            ReactionTextParticleType::new
+    );
     public static final RegistryObject<MobEffect> ELEMENTAL_VULNERABLE = MOB_EFFECTS.register(
             "elemental_vulnerable",
             ElementalVulnerableEffect::new
@@ -81,6 +183,10 @@ public class Elemental_reaction {
     public static final RegistryObject<MobEffect> IMBALANCED = MOB_EFFECTS.register(
             "imbalanced",
             ImbalancedEffect::new
+    );
+    public static final RegistryObject<MobEffect> FROZEN = MOB_EFFECTS.register(
+            "frozen",
+            FrozenEffect::new
     );
 
     public Elemental_reaction() {
@@ -112,6 +218,88 @@ public class Elemental_reaction {
         // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
         ElementExplosionHandler.setDiffusionParticleEffect(ElementDiffusionParticles::spawn);
+        ElementExplosionHandler.setBurningReactionEffect(new BurningReactionEffect() {
+            @Override
+            public void spawn(net.minecraft.server.level.ServerLevel level,
+                              net.minecraft.world.entity.LivingEntity target,
+                              String attachedElement, String incomingElement) {
+                BurningParticles.spawn(level, target, attachedElement, incomingElement);
+            }
+        });
+        ElementExplosionHandler.setFreezeParticleEffect(new FreezeParticleEffect() {
+            @Override
+            public void spawn(net.minecraft.server.level.ServerLevel level,
+                              net.minecraft.world.entity.LivingEntity target,
+                              String attachedElement, String incomingElement) {
+                FreezeParticles.spawn(level, target, attachedElement, incomingElement);
+            }
+
+            @Override
+            public void tick(net.minecraft.server.level.ServerLevel level,
+                             net.minecraft.world.entity.LivingEntity target) {
+                FreezeParticles.tick(level, target);
+            }
+        });
+        ElementExplosionHandler.setTurbulenceParticleEffect(new TurbulenceParticleEffect() {
+            @Override
+            public void spawn(net.minecraft.server.level.ServerLevel level,
+                              net.minecraft.world.entity.LivingEntity target,
+                              String attachedElement, String incomingElement) {
+                TurbulenceParticles.spawn(level, target, attachedElement, incomingElement);
+            }
+
+            @Override
+            public void tick(net.minecraft.server.level.ServerLevel level,
+                             net.minecraft.world.entity.LivingEntity target) {
+                TurbulenceParticles.tick(level, target);
+            }
+        });
+        ElementExplosionHandler.setMudflowParticleEffect(new MudflowParticleEffect() {
+            @Override
+            public void spawn(net.minecraft.server.level.ServerLevel level,
+                              net.minecraft.world.entity.LivingEntity target,
+                              String attachedElement, String incomingElement) {
+                MudflowParticles.spawn(level, target, attachedElement, incomingElement);
+            }
+
+            @Override
+            public void tick(net.minecraft.server.level.ServerLevel level,
+                             net.minecraft.world.entity.LivingEntity target) {
+                MudflowParticles.tick(level, target);
+            }
+
+            @Override
+            public void damageTick(net.minecraft.server.level.ServerLevel level,
+                                   net.minecraft.world.entity.LivingEntity target) {
+                MudflowParticles.damageTick(level, target);
+            }
+        });
+        ElementExplosionHandler.setSoulScorchParticleEffect(new SoulScorchParticleEffect() {
+            @Override
+            public void spawn(net.minecraft.server.level.ServerLevel level,
+                              net.minecraft.world.entity.LivingEntity target,
+                              String attachedElement, String incomingElement) {
+                SoulScorchParticles.spawn(level, target, attachedElement, incomingElement);
+            }
+
+            @Override
+            public void tick(net.minecraft.server.level.ServerLevel level,
+                             net.minecraft.world.entity.LivingEntity target) {
+                SoulScorchParticles.tick(level, target);
+            }
+
+            @Override
+            public void damageTick(net.minecraft.server.level.ServerLevel level,
+                                   net.minecraft.world.entity.LivingEntity target) {
+                SoulScorchParticles.damageTick(level, target);
+            }
+
+            @Override
+            public void conversion(net.minecraft.server.level.ServerLevel level,
+                                   net.minecraft.world.entity.LivingEntity target) {
+                SoulScorchParticles.conversion(level, target);
+            }
+        });
         LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
 
         if (Config.logDirtBlock) LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
@@ -145,9 +333,74 @@ public class Elemental_reaction {
         }
 
         @SubscribeEvent
+        public static void addEntityLayers(EntityRenderersEvent.AddLayers event) {
+            FrozenEntityRenderer.registerLayers(event);
+        }
+
+        @SubscribeEvent
         public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
             event.registerSpriteSet(ELEMENT_ATTACHMENT_PARTICLE.get(), org.elemental_reaction.client.particle.ElementAttachmentParticle.Provider::new);
             event.registerSpriteSet(ELEMENT_DIFFUSION_PARTICLE.get(), org.elemental_reaction.client.particle.ElementDiffusionParticle.Provider::new);
+            event.registerSpriteSet(MUD_BLOB_PARTICLE.get(), org.elemental_reaction.client.particle.MudflowParticle.MudBlobProvider::new);
+            event.registerSpriteSet(MUD_CHUNK_PARTICLE.get(), org.elemental_reaction.client.particle.MudflowParticle.MudChunkProvider::new);
+            event.registerSpriteSet(SWAMP_MOTE_PARTICLE.get(), org.elemental_reaction.client.particle.MudflowParticle.SwampMoteProvider::new);
+            event.registerSpriteSet(WATER_DROP_PARTICLE.get(), org.elemental_reaction.client.particle.MudflowParticle.WaterDropProvider::new);
+            event.registerSpriteSet(MUD_RING_PARTICLE.get(), org.elemental_reaction.client.particle.MudflowParticle.MudRingProvider::new);
+            event.registerSpriteSet(TURBULENCE_ARC_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.TurbulenceParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.TurbulenceParticle.Kind.ARC));
+            event.registerSpriteSet(TURBULENCE_TIDE_DROP_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.TurbulenceParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.TurbulenceParticle.Kind.TIDE_DROP));
+            event.registerSpriteSet(TURBULENCE_WATER_DROP_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.TurbulenceParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.TurbulenceParticle.Kind.WATER_DROP));
+            event.registerSpriteSet(TURBULENCE_DARK_SPARK_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.TurbulenceParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.TurbulenceParticle.Kind.DARK_SPARK));
+            event.registerSpriteSet(TURBULENCE_BLACK_SMOKE_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.TurbulenceParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.TurbulenceParticle.Kind.SMOKE));
+            event.registerSpriteSet(BURNING_FLAME_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.BurningParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.BurningParticle.Kind.FLAME));
+            event.registerSpriteSet(BURNING_EMBER_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.BurningParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.BurningParticle.Kind.EMBER));
+            event.registerSpriteSet(BURNING_SPARK_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.BurningParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.BurningParticle.Kind.SPARK));
+            event.registerSpriteSet(BURNING_GRASS_BIT_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.BurningParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.BurningParticle.Kind.GRASS_BIT));
+            event.registerSpriteSet(BURNING_BLACK_SMOKE_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.BurningParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.BurningParticle.Kind.SMOKE));
+            event.registerSpriteSet(FREEZE_ICE_RING_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.FreezeParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.FreezeParticle.Kind.ICE_RING));
+            event.registerSpriteSet(FREEZE_ICE_CRYSTAL_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.FreezeParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.FreezeParticle.Kind.ICE_CRYSTAL));
+            event.registerSpriteSet(FREEZE_FROST_MIST_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.FreezeParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.FreezeParticle.Kind.FROST_MIST));
+            event.registerSpriteSet(FREEZE_ICE_SHARD_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.FreezeParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.FreezeParticle.Kind.ICE_SHARD));
+            event.registerSpriteSet(FREEZE_SNOW_GLINT_PARTICLE.get(),
+                    sprites -> new org.elemental_reaction.client.particle.FreezeParticle.Provider(
+                            sprites, org.elemental_reaction.client.particle.FreezeParticle.Kind.SNOW_GLINT));
+            event.registerSpriteSet(SOUL_FLAME_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.FLAME));
+            event.registerSpriteSet(DARK_SPARK_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.DARK_SPARK));
+            event.registerSpriteSet(BLACK_SMOKE_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.SMOKE));
+            event.registerSpriteSet(SOUL_SHARD_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.SHARD));
+            event.registerSpriteSet(SOUL_SPARK_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.SOUL_SPARK));
+            event.registerSpriteSet(SOUL_RING_PARTICLE.get(), sprites -> new org.elemental_reaction.client.particle.SoulScorchParticle.Provider(sprites, org.elemental_reaction.client.particle.SoulScorchParticle.Kind.RING));
+            event.registerSpecial(
+                    REACTION_TEXT_PARTICLE.get(),
+                    new org.elemental_reaction.client.particle.ReactionTextParticle.Provider()
+            );
         }
     }
 }

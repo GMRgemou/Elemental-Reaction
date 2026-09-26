@@ -9,4 +9,7 @@ public interface TurbulenceParticleEffect {
     };
 
     void spawn(ServerLevel level, LivingEntity target, String attachedElement, String incomingElement);
+
+    default void tick(ServerLevel level, LivingEntity target) {
+    }
 }

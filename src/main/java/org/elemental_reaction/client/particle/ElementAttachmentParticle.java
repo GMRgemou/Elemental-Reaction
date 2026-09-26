@@ -7,6 +7,7 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.client.renderer.LightTexture;
 
 public class ElementAttachmentParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
@@ -19,13 +20,18 @@ public class ElementAttachmentParticle extends TextureSheetParticle {
         setAlpha(0.82F);
         setSpriteFromAge(sprites);
 
-        quadSize = 0.065F + random.nextFloat() * 0.055F;
+        quadSize = 0.034F + random.nextFloat() * 0.029F;
         lifetime = 10 + random.nextInt(13);
         gravity = 0.055F;
         yd = -0.004D - random.nextDouble() * 0.014D;
         xd = (random.nextDouble() - 0.5D) * 0.008D;
         zd = (random.nextDouble() - 0.5D) * 0.008D;
         hasPhysics = false;
+    }
+
+    @Override
+    protected int getLightColor(float partialTick) {
+        return LightTexture.FULL_BRIGHT;
     }
 
     @Override

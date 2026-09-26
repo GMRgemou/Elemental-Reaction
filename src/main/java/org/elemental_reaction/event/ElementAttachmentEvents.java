@@ -16,7 +16,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
@@ -50,11 +49,18 @@ public final class ElementAttachmentEvents {
     @SubscribeEvent
     public static void expireAttachment(LivingEvent.LivingTickEvent event) {
         LivingEntity entity = event.getEntity();
+        if (entity.hasEffect(Elemental_reaction.FROZEN.get())) {
+            freezeMovement(entity);
+        }
+
         if (entity.level().isClientSide) {
             return;
         }
 
+        ElementExplosionHandler.tickFrozen(entity);
         ElementExplosionHandler.tickMudflow(entity);
+        ElementExplosionHandler.tickSoulScorch(entity);
+        ElementExplosionHandler.tickTurbulence(entity);
 
         long gameTime = entity.level().getGameTime();
         getAttachment(entity).ifPresent(attachment -> {
@@ -69,20 +75,17 @@ public final class ElementAttachmentEvents {
     }
 
     @SubscribeEvent
-    public static void tickReactionTextDisplays(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
+    public static void amplifyImbalancedKnockback(LivingKnockBackEvent event) {
+        if (ElementExplosionHandler.isSoulScorchKnockbackSuppressed()) {
+            event.setCanceled(true);
             return;
         }
 
-        for (ServerLevel level : event.getServer().getAllLevels()) {
-            ElementExplosionHandler.tickReactionTextDisplays(level);
-        }
-    }
-
-    @SubscribeEvent
-    public static void amplifyImbalancedKnockback(LivingKnockBackEvent event) {
         if (event.getEntity().hasEffect(Elemental_reaction.IMBALANCED.get())) {
             event.setStrength(event.getStrength() * 2.0F);
+        }
+        if (event.getEntity().hasEffect(Elemental_reaction.FROZEN.get())) {
+            event.setCanceled(true);
         }
     }
 
@@ -140,13 +143,19 @@ public final class ElementAttachmentEvents {
         return entity.getCapability(ElementAttachmentCapability.INSTANCE);
     }
 
+    private static void freezeMovement(LivingEntity entity) {
+        entity.setDeltaMovement(0.0D, 0.0D, 0.0D);
+        entity.hasImpulse = true;
+        entity.setJumping(false);
+    }
+
     private static void spawnAttachmentParticles(ServerLevel level, LivingEntity entity, String element) {
         ElementColors.ElementColor color = ElementColors.forElement(element);
         double baseAngle = entity.tickCount * 0.2D;
         double height = entity.getBbHeight();
         double radius = Math.max(0.35D, entity.getBbWidth() * 0.55D);
 
-        for (int index = 0; index < 2; index++) {
+        for (int index = 0; index < 3; index++) {
             double angle = baseAngle + index * Math.PI + entity.getRandom().nextDouble() * 0.35D;
             double distance = radius * (0.85D + entity.getRandom().nextDouble() * 0.45D);
             double x = entity.getX() + Math.cos(angle) * distance;

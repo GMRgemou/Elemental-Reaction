@@ -1,4 +1,12 @@
 {
   "effect.elemental_reaction.elemental_vulnerable": "\u5143\u7d20\u8106\u5f31",
-  "effect.elemental_reaction.imbalanced": "\u5931\u8861"
+  "effect.elemental_reaction.imbalanced": "\u5931\u8861",
+  "effect.elemental_reaction.frozen": "\u51b0\u51bb",
+  "reaction.elemental_reaction.burning": "\u71c3\u70e7",
+  "reaction.elemental_reaction.diffusion": "\u6269\u6563",
+  "reaction.elemental_reaction.shock": "\u96f7\u9707",
+  "reaction.elemental_reaction.mudflow": "\u6ce5\u6d41",
+  "reaction.elemental_reaction.turbulence": "\u4e71\u6d41",
+  "reaction.elemental_reaction.frozen": "\u51b0\u51bb",
+  "reaction.elemental_reaction.soul_scorch": "\u707c\u9b42"
 }

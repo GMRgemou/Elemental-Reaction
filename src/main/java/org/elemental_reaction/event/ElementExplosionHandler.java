@@ -4,29 +4,38 @@ import org.elemental_reaction.capability.ElementAttachmentCapability;
 import org.elemental_reaction.Elemental_reaction;
 import org.elemental_reaction.compat.ElementalCombatBridge;
 import org.elemental_reaction.element.ElementColors;
+import org.elemental_reaction.particle.ReactionTextParticleOptions;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.monster.ZombieVillager;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public final class ElementExplosionHandler {
+    private static final String REACTION_BURNING = "reaction.elemental_reaction.burning";
+    private static final String REACTION_DIFFUSION = "reaction.elemental_reaction.diffusion";
+    private static final String REACTION_SHOCK = "reaction.elemental_reaction.shock";
+    private static final String REACTION_MUDFLOW = "reaction.elemental_reaction.mudflow";
+    private static final String REACTION_TURBULENCE = "reaction.elemental_reaction.turbulence";
+    private static final String REACTION_FROZEN = "reaction.elemental_reaction.frozen";
+    private static final String REACTION_SOUL_SCORCH = "reaction.elemental_reaction.soul_scorch";
+
     private static final long ELEMENTAL_CALM_DURATION_TICKS = 20L * 3L;
     private static final int BURNING_SECONDS = 3;
     private static final double DIFFUSION_RANGE = 5.0D;
@@ -36,20 +45,25 @@ public final class ElementExplosionHandler {
     private static final float SHOCKWAVE_DAMAGE_MULTIPLIER = 0.5F;
     private static final int ELEMENTAL_VULNERABLE_DURATION_TICKS = 20 * 3;
     private static final int IMBALANCED_DURATION_TICKS = 20 * 5;
-    private static final int REACTION_TEXT_DURATION_TICKS = 20;
     private static final int MUDFLOW_DURATION_TICKS = 20 * 3;
     private static final int MUDFLOW_INTERVAL_TICKS = 20;
     private static final int MUDFLOW_TICKS = 3;
     private static final float MUDFLOW_DAMAGE_MULTIPLIER = 0.1F;
     private static final float TURBULENCE_DAMAGE_MULTIPLIER = 0.2F;
-    private static final double REACTION_TEXT_RISE_PER_TICK = 0.035D;
+    private static final int FROZEN_DURATION_TICKS = 20 * 3;
+    private static final int SOUL_SCORCH_DURATION_TICKS = 20 * 5;
+    private static final float SOUL_SCORCH_DOT_MULTIPLIER = 1.1F;
+    private static final float SOUL_SCORCH_FIRE_MULTIPLIER = 1.0F;
     private static final ThreadLocal<Boolean> SUPPRESS_REACTION_DAMAGE = ThreadLocal.withInitial(() -> false);
+    private static final ThreadLocal<Boolean> SUPPRESS_SOUL_SCORCH_KNOCKBACK = ThreadLocal.withInitial(() -> false);
     private static final Map<UUID, MudflowInstance> ACTIVE_MUDFLOWS = new HashMap<>();
-    private static final Map<UUID, ReactionTextInstance> ACTIVE_REACTION_TEXTS = new HashMap<>();
+    private static final Map<UUID, SoulScorchInstance> ACTIVE_SOUL_SCORCHES = new HashMap<>();
     private static volatile DiffusionParticleEffect diffusionParticleEffect = DiffusionParticleEffect.NONE;
     private static volatile BurningReactionEffect burningReactionEffect = BurningReactionEffect.NONE;
     private static volatile MudflowParticleEffect mudflowParticleEffect = MudflowParticleEffect.NONE;
     private static volatile TurbulenceParticleEffect turbulenceParticleEffect = TurbulenceParticleEffect.NONE;
+    private static volatile FreezeParticleEffect freezeParticleEffect = FreezeParticleEffect.NONE;
+    private static volatile SoulScorchParticleEffect soulScorchParticleEffect = SoulScorchParticleEffect.NONE;
 
     private ElementExplosionHandler() {
     }
@@ -70,8 +84,36 @@ public final class ElementExplosionHandler {
         turbulenceParticleEffect = effect == null ? TurbulenceParticleEffect.NONE : effect;
     }
 
+    public static void setFreezeParticleEffect(FreezeParticleEffect effect) {
+        freezeParticleEffect = effect == null ? FreezeParticleEffect.NONE : effect;
+    }
+
+    public static void setSoulScorchParticleEffect(SoulScorchParticleEffect effect) {
+        soulScorchParticleEffect = effect == null ? SoulScorchParticleEffect.NONE : effect;
+    }
+
     public static boolean isReactionDamageSuppressed() {
         return SUPPRESS_REACTION_DAMAGE.get();
+    }
+
+    public static boolean isSoulScorchKnockbackSuppressed() {
+        return SUPPRESS_SOUL_SCORCH_KNOCKBACK.get();
+    }
+
+    public static void tickTurbulence(LivingEntity target) {
+        if (target.level() instanceof ServerLevel level
+                && target.isAlive()
+                && target.hasEffect(Elemental_reaction.IMBALANCED.get())) {
+            turbulenceParticleEffect.tick(level, target);
+        }
+    }
+
+    public static void tickFrozen(LivingEntity target) {
+        if (target.level() instanceof ServerLevel level
+                && target.isAlive()
+                && target.hasEffect(Elemental_reaction.FROZEN.get())) {
+            freezeParticleEffect.tick(level, target);
+        }
     }
 
     public static void tickMudflow(LivingEntity target) {
@@ -89,6 +131,10 @@ public final class ElementExplosionHandler {
             return;
         }
 
+        if (target.level() instanceof ServerLevel serverLevel) {
+            mudflowParticleEffect.tick(serverLevel, target);
+        }
+
         long gameTime = target.level().getGameTime();
         if (gameTime < mudflow.nextDamageAt) {
             return;
@@ -98,34 +144,42 @@ public final class ElementExplosionHandler {
         mudflow.remainingTicks--;
         mudflow.nextDamageAt += MUDFLOW_INTERVAL_TICKS;
 
+        if (target.level() instanceof ServerLevel serverLevel) {
+            mudflowParticleEffect.damageTick(serverLevel, target);
+        }
+
         if (mudflow.remainingTicks <= 0) {
             ACTIVE_MUDFLOWS.remove(target.getUUID());
         }
     }
 
-    public static void tickReactionTextDisplays(ServerLevel level) {
-        Iterator<Map.Entry<UUID, ReactionTextInstance>> iterator = ACTIVE_REACTION_TEXTS.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, ReactionTextInstance> entry = iterator.next();
-            ReactionTextInstance text = entry.getValue();
-            if (!text.dimension.equals(level.dimension())) {
-                continue;
-            }
+    public static void tickSoulScorch(LivingEntity target) {
+        if (target.level().isClientSide) {
+            return;
+        }
 
-            Entity entity = level.getEntity(entry.getKey());
-            if (entity == null || entity.isRemoved()) {
-                iterator.remove();
-                continue;
-            }
+        SoulScorchInstance scorch = ACTIVE_SOUL_SCORCHES.get(target.getUUID());
+        if (scorch == null) {
+            return;
+        }
 
-            text.age++;
-            if (text.age >= REACTION_TEXT_DURATION_TICKS) {
-                entity.discard();
-                iterator.remove();
-                continue;
-            }
+        if (!target.isAlive() || target.isRemoved() || scorch.remainingTicks <= 0) {
+            ACTIVE_SOUL_SCORCHES.remove(target.getUUID());
+            return;
+        }
 
-            entity.setPos(entity.getX(), entity.getY() + REACTION_TEXT_RISE_PER_TICK, entity.getZ());
+        if (target.level() instanceof ServerLevel serverLevel) {
+            soulScorchParticleEffect.tick(serverLevel, target);
+        }
+
+        dealSoulScorchTickDamage(target, scorch);
+        scorch.remainingTicks--;
+        if (target.level() instanceof ServerLevel serverLevel) {
+            soulScorchParticleEffect.damageTick(serverLevel, target);
+        }
+
+        if (!target.isAlive() || scorch.remainingTicks <= 0) {
+            ACTIVE_SOUL_SCORCHES.remove(target.getUUID());
         }
     }
 
@@ -155,6 +209,14 @@ public final class ElementExplosionHandler {
         if (isTurbulenceReaction(attachedElement, incomingElement)) {
             turbulence(target, attachedElement, incomingElement, source, damageAmount);
         }
+
+        if (isFrozenReaction(attachedElement, incomingElement)) {
+            freeze(target, attachedElement, incomingElement, source, damageAmount);
+        }
+
+        if (isSoulScorchReaction(attachedElement, incomingElement)) {
+            soulScorch(target, attachedElement, incomingElement, source, damageAmount);
+        }
     }
 
     private static boolean isBurningReaction(String attachedElement, String incomingElement) {
@@ -172,6 +234,16 @@ public final class ElementExplosionHandler {
                 || "darkness".equals(attachedElement) && "water".equals(incomingElement);
     }
 
+    private static boolean isFrozenReaction(String attachedElement, String incomingElement) {
+        return "ice".equals(attachedElement) && "water".equals(incomingElement)
+                || "water".equals(attachedElement) && "ice".equals(incomingElement);
+    }
+
+    private static boolean isSoulScorchReaction(String attachedElement, String incomingElement) {
+        return "fire".equals(attachedElement) && "darkness".equals(incomingElement)
+                || "darkness".equals(attachedElement) && "fire".equals(incomingElement);
+    }
+
     private static void burn(LivingEntity target, String attachedElement, String incomingElement, float damageAmount) {
         if (target.level().isClientSide) {
             return;
@@ -179,7 +251,7 @@ public final class ElementExplosionHandler {
 
         target.setSecondsOnFire(BURNING_SECONDS);
         target.hurt(target.damageSources().onFire(), damageAmount);
-        spawnReactionName(target, "燃烧");
+        spawnReactionName(target, REACTION_BURNING);
 
         if (target.level() instanceof ServerLevel serverLevel) {
             burningReactionEffect.spawn(serverLevel, target, attachedElement, incomingElement);
@@ -212,7 +284,7 @@ public final class ElementExplosionHandler {
         }
 
         if (source.level() instanceof ServerLevel serverLevel) {
-            spawnReactionName(source, "扩散");
+            spawnReactionName(source, REACTION_DIFFUSION);
             diffusionParticleEffect.spawn(serverLevel, source, affectedTargets, element, direction);
         }
     }
@@ -256,7 +328,7 @@ public final class ElementExplosionHandler {
             SUPPRESS_REACTION_DAMAGE.set(previousSuppression);
         }
 
-        spawnReactionName(source, "雷震");
+        spawnReactionName(source, REACTION_SHOCK);
 
         if (source.level() instanceof ServerLevel serverLevel) {
             spawnShockwaveParticles(serverLevel, source);
@@ -284,7 +356,7 @@ public final class ElementExplosionHandler {
                 true,
                 true
         ));
-        spawnReactionName(target, "泥流");
+        spawnReactionName(target, REACTION_MUDFLOW);
 
         if (target.level() instanceof ServerLevel serverLevel) {
             mudflowParticleEffect.spawn(serverLevel, target, attachedElement, incomingElement);
@@ -315,10 +387,112 @@ public final class ElementExplosionHandler {
             SUPPRESS_REACTION_DAMAGE.set(previousSuppression);
         }
 
-        spawnReactionName(target, "乱流");
+        spawnReactionName(target, REACTION_TURBULENCE);
 
         if (target.level() instanceof ServerLevel serverLevel) {
             turbulenceParticleEffect.spawn(serverLevel, target, attachedElement, incomingElement);
+        }
+    }
+
+    private static void freeze(LivingEntity target, String attachedElement, String incomingElement,
+                               DamageSource damageSource, float damageAmount) {
+        if (target.level().isClientSide || damageAmount <= 0.0F) {
+            return;
+        }
+
+        target.addEffect(new MobEffectInstance(
+                Elemental_reaction.FROZEN.get(),
+                FROZEN_DURATION_TICKS,
+                0,
+                false,
+                true,
+                true
+        ));
+
+        boolean previousSuppression = SUPPRESS_REACTION_DAMAGE.get();
+        SUPPRESS_REACTION_DAMAGE.set(true);
+        try {
+            ElementalCombatBridge.withSyntheticDamageElement(damageSource, "ice",
+                    () -> hurtIgnoringInvulnerability(target, damageSource, damageAmount));
+        } finally {
+            SUPPRESS_REACTION_DAMAGE.set(previousSuppression);
+        }
+
+        spawnReactionName(target, REACTION_FROZEN);
+
+        if (target.level() instanceof ServerLevel serverLevel) {
+            freezeParticleEffect.spawn(serverLevel, target, attachedElement, incomingElement);
+        }
+    }
+
+    private static void soulScorch(LivingEntity target, String attachedElement, String incomingElement,
+                                   DamageSource damageSource, float damageAmount) {
+        if (target.level().isClientSide || damageAmount <= 0.0F) {
+            return;
+        }
+
+        boolean canReceiveDamageOverTime = target.getMobType() != MobType.UNDEAD;
+        LivingEntity affectedTarget = target;
+        boolean converted = false;
+
+        if (target instanceof AbstractPiglin piglin) {
+            Mob zombifiedPiglin = piglin.convertTo(EntityType.ZOMBIFIED_PIGLIN, true);
+            if (zombifiedPiglin != null) {
+                affectedTarget = zombifiedPiglin;
+                converted = true;
+            }
+        } else if (target instanceof Villager villager) {
+            ZombieVillager zombieVillager = villager.convertTo(EntityType.ZOMBIE_VILLAGER, true);
+            if (zombieVillager != null) {
+                zombieVillager.setVillagerData(villager.getVillagerData());
+                zombieVillager.setVillagerXp(villager.getVillagerXp());
+                affectedTarget = zombieVillager;
+                converted = true;
+            }
+        }
+
+        boolean previousSuppression = SUPPRESS_REACTION_DAMAGE.get();
+        boolean previousKnockbackSuppression = SUPPRESS_SOUL_SCORCH_KNOCKBACK.get();
+        SUPPRESS_REACTION_DAMAGE.set(true);
+        SUPPRESS_SOUL_SCORCH_KNOCKBACK.set(true);
+        try {
+            LivingEntity damageTarget = affectedTarget;
+            ElementalCombatBridge.withSyntheticDamageElement(damageSource, "fire",
+                    () -> hurtIgnoringInvulnerability(damageTarget, damageSource,
+                            damageAmount * SOUL_SCORCH_FIRE_MULTIPLIER));
+        } finally {
+            SUPPRESS_REACTION_DAMAGE.set(previousSuppression);
+            SUPPRESS_SOUL_SCORCH_KNOCKBACK.set(previousKnockbackSuppression);
+        }
+
+        if (canReceiveDamageOverTime && affectedTarget.isAlive()) {
+            ACTIVE_SOUL_SCORCHES.put(affectedTarget.getUUID(), new SoulScorchInstance(
+                    damageSource,
+                    damageAmount * SOUL_SCORCH_DOT_MULTIPLIER / SOUL_SCORCH_DURATION_TICKS,
+                    SOUL_SCORCH_DURATION_TICKS
+            ));
+        }
+
+        spawnReactionName(affectedTarget, REACTION_SOUL_SCORCH);
+        if (affectedTarget.level() instanceof ServerLevel serverLevel) {
+            soulScorchParticleEffect.spawn(serverLevel, affectedTarget, attachedElement, incomingElement);
+            if (converted) {
+                soulScorchParticleEffect.conversion(serverLevel, affectedTarget);
+            }
+        }
+    }
+
+    private static void dealSoulScorchTickDamage(LivingEntity target, SoulScorchInstance scorch) {
+        boolean previousSuppression = SUPPRESS_REACTION_DAMAGE.get();
+        boolean previousKnockbackSuppression = SUPPRESS_SOUL_SCORCH_KNOCKBACK.get();
+        SUPPRESS_REACTION_DAMAGE.set(true);
+        SUPPRESS_SOUL_SCORCH_KNOCKBACK.set(true);
+        try {
+            ElementalCombatBridge.withSyntheticDamageElement(scorch.damageSource, "darkness",
+                    () -> hurtIgnoringInvulnerability(target, scorch.damageSource, scorch.damagePerTick));
+        } finally {
+            SUPPRESS_REACTION_DAMAGE.set(previousSuppression);
+            SUPPRESS_SOUL_SCORCH_KNOCKBACK.set(previousKnockbackSuppression);
         }
     }
 
@@ -390,30 +564,17 @@ public final class ElementExplosionHandler {
         }
 
         Vec3 position = reactionTextPosition(target);
-        ArmorStand text = new ArmorStand(level, position.x, position.y, position.z);
-        Component name = Component.literal(reactionName);
-        text.setCustomName(name);
-        text.setCustomNameVisible(true);
-        text.setInvisible(true);
-        text.setNoGravity(true);
-        text.setSilent(true);
-
-        CompoundTag tag = text.saveWithoutId(new CompoundTag());
-        tag.putBoolean("Invisible", true);
-        tag.putBoolean("Marker", true);
-        tag.putBoolean("NoGravity", true);
-        tag.putBoolean("CustomNameVisible", true);
-        tag.putString("CustomName", Component.Serializer.toJson(name));
-        text.load(tag);
-        text.setPos(position.x, position.y, position.z);
-        text.setCustomName(name);
-        text.setCustomNameVisible(true);
-        text.setInvisible(true);
-        text.setNoGravity(true);
-        text.setSilent(true);
-
-        level.addFreshEntity(text);
-        ACTIVE_REACTION_TEXTS.put(text.getUUID(), new ReactionTextInstance(level.dimension()));
+        level.sendParticles(
+                new ReactionTextParticleOptions(Elemental_reaction.REACTION_TEXT_PARTICLE.get(), reactionName),
+                position.x,
+                position.y,
+                position.z,
+                1,
+                0.0D,
+                0.0D,
+                0.0D,
+                0.0D
+        );
     }
 
     private static Vec3 reactionTextPosition(LivingEntity target) {
@@ -526,12 +687,16 @@ public final class ElementExplosionHandler {
         }
     }
 
-    private static final class ReactionTextInstance {
-        private final ResourceKey<Level> dimension;
-        private int age;
+    private static final class SoulScorchInstance {
+        private final DamageSource damageSource;
+        private final float damagePerTick;
+        private int remainingTicks;
 
-        private ReactionTextInstance(ResourceKey<Level> dimension) {
-            this.dimension = dimension;
+        private SoulScorchInstance(DamageSource damageSource, float damagePerTick, int remainingTicks) {
+            this.damageSource = damageSource;
+            this.damagePerTick = damagePerTick;
+            this.remainingTicks = remainingTicks;
         }
     }
+
 }

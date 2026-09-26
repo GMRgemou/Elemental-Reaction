@@ -4,8 +4,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 @FunctionalInterface
-public interface MudflowParticleEffect {
-    MudflowParticleEffect NONE = (level, target, attachedElement, incomingElement) -> {
+public interface SoulScorchParticleEffect {
+    SoulScorchParticleEffect NONE = (level, target, attachedElement, incomingElement) -> {
     };
 
     void spawn(ServerLevel level, LivingEntity target, String attachedElement, String incomingElement);
@@ -14,5 +14,8 @@ public interface MudflowParticleEffect {
     }
 
     default void damageTick(ServerLevel level, LivingEntity target) {
+    }
+
+    default void conversion(ServerLevel level, LivingEntity target) {
     }
 }

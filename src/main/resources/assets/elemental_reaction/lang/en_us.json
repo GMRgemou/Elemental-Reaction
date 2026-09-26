@@ -1,4 +1,12 @@
 {
   "effect.elemental_reaction.elemental_vulnerable": "Elemental Vulnerability",
-  "effect.elemental_reaction.imbalanced": "Imbalanced"
+  "effect.elemental_reaction.imbalanced": "Imbalanced",
+  "effect.elemental_reaction.frozen": "Frozen",
+  "reaction.elemental_reaction.burning": "Burning",
+  "reaction.elemental_reaction.diffusion": "Diffusion",
+  "reaction.elemental_reaction.shock": "Shock",
+  "reaction.elemental_reaction.mudflow": "Mudflow",
+  "reaction.elemental_reaction.turbulence": "Turbulence",
+  "reaction.elemental_reaction.frozen": "Frozen",
+  "reaction.elemental_reaction.soul_scorch": "Soul Scorch"
 }
